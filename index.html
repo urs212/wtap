@@ -1,172 +1,178 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>W-TAP Online Ranking</title>
+  <meta charset="UTF-8">
+  <title>WTAP GAME</title>
+  <style>
+    body {
+      background: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+    }
 
-<style>
-body {
-  font-family: Arial, sans-serif;
-  background: #111;
-  color: white;
-  text-align: center;
-}
+    h1 {
+      margin-top: 30px;
+    }
 
-.container {
-  margin-top: 40px;
-}
+    #score {
+      font-size: 24px;
+      margin: 20px;
+    }
 
-button {
-  padding: 10px 20px;
-  margin: 10px;
-  cursor: pointer;
-}
+    #tapBtn {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      border: none;
+      font-size: 22px;
+      background: #3b82f6;
+      color: white;
+      cursor: pointer;
+    }
 
-#rank-list {
-  list-style: none;
-  padding: 0;
-  max-width: 300px;
-  margin: 20px auto;
-}
+    #tapBtn:active {
+      transform: scale(0.95);
+    }
 
-#rank-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 5px 10px;
-  border-bottom: 1px solid #444;
-}
-</style>
+    #ranking {
+      margin-top: 40px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      display: flex;
+      justify-content: space-between;
+      width: 250px;
+      margin: 5px auto;
+      background: #1e293b;
+      padding: 8px 12px;
+      border-radius: 8px;
+    }
+
+    input {
+      padding: 8px;
+      margin-top: 15px;
+      border-radius: 6px;
+      border: none;
+      text-align: center;
+    }
+  </style>
 </head>
-
 <body>
 
-<div class="container">
-  <h1>W-TAP 연습</h1>
+<h1>WTAP</h1>
 
-  <input type="text" id="username" placeholder="닉네임 입력">
-  <br>
-  <button onclick="startGame()">게임 시작</button>
+<div id="score">Score: 0</div>
 
-  <h2>콤보: <span id="combo">0</span></h2>
+<button id="tapBtn">TAP</button>
 
-  <h2>🏆 TOP 10</h2>
+<br>
+<input type="text" id="nameInput" placeholder="닉네임 입력">
+
+<div id="ranking">
+  <h2>TOP 10</h2>
   <ul id="rank-list"></ul>
 </div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit }
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+<script>
+  let score = 0;
+  const scoreDisplay = document.getElementById("score");
+  const tapBtn = document.getElementById("tapBtn");
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCXW-7PNLbqtK04dgvdyYuu3s-W_c5w-0c",
-  authDomain: "tapy-9cb71.firebaseapp.com",
-  projectId: "tapy-9cb71",
-  storageBucket: "tapy-9cb71.firebasestorage.app",
-  messagingSenderId: "1021099838212",
-  appId: "1:1021099838212:web:33d5659a6d1357c52d1e51"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-let combo = 0;
-let started = false;
-let wPressed = false;
-
-window.startGame = function() {
-  const name = document.getElementById("username").value.trim();
-  if (!name) {
-    alert("닉네임 입력해라");
-    return;
-  }
-  combo = 0;
-  started = true;
-  document.getElementById("combo").innerText = combo;
-};
-
-document.addEventListener("keydown", (e) => {
-  if (!started) return;
-
-  if (e.key.toLowerCase() === "w") {
-    if (!wPressed) {
-      wPressed = true;
-    } else {
-      fail();
-    }
-  }
-});
-
-document.addEventListener("mousedown", () => {
-  if (!started) return;
-
-  if (wPressed) {
-    combo++;
-    document.getElementById("combo").innerText = combo;
-  } else {
-    fail();
-  }
-});
-
-document.addEventListener("keyup", (e) => {
-  if (!started) return;
-
-  if (e.key.toLowerCase() === "w") {
-    if (wPressed) {
-      wPressed = false;
-    } else {
-      fail();
-    }
-  }
-});
-
-function fail() {
-  saveScore();
-  combo = 0;
-  document.getElementById("combo").innerText = combo;
-}
-
-async function saveScore() {
-  const name = document.getElementById("username").value.trim();
-  if (combo <= 0 || !name) return;
-
-  await addDoc(collection(db, "wtapRanking"), {
-    name: name,
-    score: combo,
-    createdAt: Date.now()
+  tapBtn.addEventListener("click", () => {
+    score++;
+    scoreDisplay.innerText = "Score: " + score;
   });
+
+  // 10초 후 자동 종료 예시
+  setTimeout(() => {
+    const name = document.getElementById("nameInput").value.trim();
+    if (name && score > 0) {
+      saveScoreToFirebase(name, score);
+    }
+    alert("게임 종료");
+  }, 10000);
+</script>
+
+<!-- Firebase -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    query,
+    orderBy,
+    limit,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCXW-7PNLbqtK04dgvdyYuu3s-W_c5w-0c",
+    authDomain: "tapy-9cb71.firebaseapp.com",
+    projectId: "tapy-9cb71",
+    storageBucket: "tapy-9cb71.appspot.com",
+    messagingSenderId: "1021099838212",
+    appId: "1:1021099838212:web:33d5659a6d1357c52d1e51",
+    measurementId: "G-68EN7NPT8Y"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const rankingCollection = collection(db, "wtapRanking");
+
+  window.saveScoreToFirebase = async function(name, score) {
+    if (!name || score <= 0) return;
+
+    const q = query(rankingCollection, orderBy("score", "desc"), limit(10));
+    const snapshot = await getDocs(q);
+
+    let lowestScore = 0;
+    if (!snapshot.empty) {
+      const docs = snapshot.docs;
+      lowestScore = docs[docs.length - 1].data().score;
+    }
+
+    if (snapshot.size < 10 || score > lowestScore) {
+      await addDoc(rankingCollection, {
+        name: name,
+        score: score,
+        createdAt: serverTimestamp()
+      });
+    }
+
+    loadRanking();
+  };
+
+  window.loadRanking = async function() {
+    const q = query(rankingCollection, orderBy("score", "desc"), limit(10));
+    const snapshot = await getDocs(q);
+
+    const list = document.getElementById("rank-list");
+    list.innerHTML = "";
+
+    let rank = 1;
+    snapshot.forEach(doc => {
+      const data = doc.data();
+      list.innerHTML += `
+        <li>
+          <span>${rank}. ${data.name}</span>
+          <span>${data.score}</span>
+        </li>
+      `;
+      rank++;
+    });
+  };
 
   loadRanking();
-}
-
-async function loadRanking() {
-  const q = query(
-    collection(db, "wtapRanking"),
-    orderBy("score", "desc"),
-    limit(10)
-  );
-
-  const snapshot = await getDocs(q);
-
-  const list = document.getElementById("rank-list");
-  list.innerHTML = "";
-
-  let i = 1;
-  snapshot.forEach(doc => {
-    const data = doc.data();
-    list.innerHTML += `
-      <li>
-        <span>${i}. ${data.name}</span>
-        <span>${data.score}</span>
-      </li>
-    `;
-    i++;
-  });
-}
-
-window.onload = loadRanking;
-
 </script>
 
 </body>
