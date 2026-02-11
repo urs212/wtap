@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>W-TAP Online Ranking</title>
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #111;
+  color: white;
+  text-align: center;
+}
+
+.container {
+  margin-top: 40px;
+}
+
+button {
+  padding: 10px 20px;
+  margin: 10px;
+  cursor: pointer;
+}
+
+#rank-list {
+  list-style: none;
+  padding: 0;
+  max-width: 300px;
+  margin: 20px auto;
+}
+
+#rank-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 5px 10px;
+  border-bottom: 1px solid #444;
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <h1>W-TAP 연습</h1>
+
+  <input type="text" id="username" placeholder="닉네임 입력">
+  <br>
+  <button onclick="startGame()">게임 시작</button>
+
+  <h2>콤보: <span id="combo">0</span></h2>
+
+  <h2>🏆 TOP 10</h2>
+  <ul id="rank-list"></ul>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit }
+from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCXW-7PNLbqtK04dgvdyYuu3s-W_c5w-0c",
+  authDomain: "tapy-9cb71.firebaseapp.com",
+  projectId: "tapy-9cb71",
+  storageBucket: "tapy-9cb71.firebasestorage.app",
+  messagingSenderId: "1021099838212",
+  appId: "1:1021099838212:web:33d5659a6d1357c52d1e51"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let combo = 0;
+let started = false;
+let wPressed = false;
+
+window.startGame = function() {
+  const name = document.getElementById("username").value.trim();
+  if (!name) {
+    alert("닉네임 입력해라");
+    return;
+  }
+  combo = 0;
+  started = true;
+  document.getElementById("combo").innerText = combo;
+};
+
+document.addEventListener("keydown", (e) => {
+  if (!started) return;
+
+  if (e.key.toLowerCase() === "w") {
+    if (!wPressed) {
+      wPressed = true;
+    } else {
+      fail();
+    }
+  }
+});
+
+document.addEventListener("mousedown", () => {
+  if (!started) return;
+
+  if (wPressed) {
+    combo++;
+    document.getElementById("combo").innerText = combo;
+  } else {
+    fail();
+  }
+});
+
+document.addEventListener("keyup", (e) => {
+  if (!started) return;
+
+  if (e.key.toLowerCase() === "w") {
+    if (wPressed) {
+      wPressed = false;
+    } else {
+      fail();
+    }
+  }
+});
+
+function fail() {
+  saveScore();
+  combo = 0;
+  document.getElementById("combo").innerText = combo;
+}
+
+async function saveScore() {
+  const name = document.getElementById("username").value.trim();
+  if (combo <= 0 || !name) return;
+
+  await addDoc(collection(db, "wtapRanking"), {
+    name: name,
+    score: combo,
+    createdAt: Date.now()
+  });
+
+  loadRanking();
+}
+
+async function loadRanking() {
+  const q = query(
+    collection(db, "wtapRanking"),
+    orderBy("score", "desc"),
+    limit(10)
+  );
+
+  const snapshot = await getDocs(q);
+
+  const list = document.getElementById("rank-list");
+  list.innerHTML = "";
+
+  let i = 1;
+  snapshot.forEach(doc => {
+    const data = doc.data();
+    list.innerHTML += `
+      <li>
+        <span>${i}. ${data.name}</span>
+        <span>${data.score}</span>
+      </li>
+    `;
+    i++;
+  });
+}
+
+window.onload = loadRanking;
+
+</script>
+
+</body>
+</html>
